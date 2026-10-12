@@ -14,6 +14,6 @@ public static class CoopSession {
  public static void ResetRound(){
   // Restore and remove native P2 before discarding its character/inventory snapshot.
   var controller=Instance?.GetValue(null);if(controller!=null)Reset.Invoke(controller,null);
-  CoopCharacters.ResetSession();CoopVitals.Ready=false;CoopAmmoReload.Reset();CoopCombat.SimulationOwner=-1;TwoGamepads.ResetInputSession();
+  CoopCharacters.ResetSession();CoopVitals.Ready=false;CoopAmmoReload.Reset();CoopPause.Reset();CoopCombat.SimulationOwner=-1;TwoGamepads.ResetInputSession();
  }
 }

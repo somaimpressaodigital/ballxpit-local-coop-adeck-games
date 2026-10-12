@@ -1,4 +1,10 @@
-# Validation for 2.1.10
+# Validation
+
+## 2.1.11 shared pause
+
+The production build and eight rule suites passed, including 24 pause-input edge/focus/cooldown/menu cases. A native isolated-profile fixture confirmed P1 and P2 opening the actual pause UI, either player resuming the other's pause while the first Start button remains held, one transition from simultaneous Start presses, stable held buttons, Escape resuming, and P2 resuming an external/native pause. The native physics clock froze during pause and advanced after resume; the pause UI closed. These are direct production pause-handler/API fixtures, not physical-button automation claims.
+
+## 2.1.10 gameplay baseline
 
 The production plugins compile with the repository build script. Seven game-independent rule suites passed, covering locale selection, aim updates at different frame rates, controller identities/reconnection, individual health/rescue, progression, confirmation gates, and solo/co-op lifecycle/input ownership. The built companion also passed 182 Portuguese/English text checks.
 

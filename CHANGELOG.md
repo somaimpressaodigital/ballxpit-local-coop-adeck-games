@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.11
+
+- Centralized co-op pause input for both controllers and Escape, preventing duplicate processing by native and companion handlers.
+- Opened/closed the native pause UI rather than changing only the game-state flag.
+- Allowed either player to resume a pause opened by the other player.
+- Consumed held/simultaneous presses once, primed input on focus changes, and blocked pause commands during upgrade menus.
+- Debounced real state transitions while allowing repeated same-state native calls without extending the input block.
+- Preserved native solo pause input and added 24 pause-input regression cases.
+
 ## 2.1.10
 
 - Removed the companion's full-follower-reload requirement. Native readiness, fire-rate and reload rules determine when the next attack may start.

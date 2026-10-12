@@ -18,7 +18,6 @@ public static class CoopCombat {
  static ArrowObj LastSecondProjectile;
  sealed class ArrowStep{public Vector3 Position;public object Previous;public bool Scoped;public void Restore(){if(Scoped){Scoped=false;Exit.Invoke(null,new[]{Previous});}}}
  static Shapes.Disc Marker;
- static float PauseChanged;
  public static int Duplicated,SecondHits;
  public static int SimulationOwner=-1;
  sealed class PlayerScope{public int Previous;}
@@ -83,7 +82,6 @@ public static class CoopCombat {
  }
  static void StateChanged(GameState __0){
   if(!CoopMode.Enabled)return;
-  if(__0==GameState.kPaused||__0==GameState.kPlaying)PauseChanged=Time.unscaledTime;
   if(__0!=GameState.kPlaying)return;
   for(int i=0;i<2;i++){var player=PlayerAt(i);if(player!=null)player.IsRunningLevelUp=false;}
  }
@@ -101,12 +99,6 @@ public static class CoopCombat {
    if(Marker==null){var obj=new GameObject("CoopP1Indicator");Marker=obj.AddComponent(Il2CppType.Of<Shapes.Disc>()).Cast<Shapes.Disc>();Marker.Type=Shapes.DiscType.Disc;Marker.Geometry=Shapes.DiscGeometry.Billboard;Marker.ZTest=UnityEngine.Rendering.CompareFunction.Always;Marker.SortingOrder=100;Marker.RenderQueue=4000;Marker.Radius=0.13f;Marker.Color=new Color(1,0.5f,0.72f,1);}
    Marker.gameObject.SetActive(!CoopVitals.Down(0));Marker.transform.position=Pos(first)+new Vector3(0,0,-1f);
   }
-  if(CoopTestHarness.Active||!Application.isFocused||GameMgr.I==null||Time.unscaledTime-PauseChanged<0.25f)return;
-  bool pressed=Input.GetKeyDown(KeyCode.Escape);
-  for(int i=0;i<2;i++){var pad=TwoGamepads.GetPad(i);if(pad!=null&&pad.start.justPressed)pressed=true;}
-  if(!pressed)return;
-  if(GameMgr.I.CurState==GameState.kPlaying)GameMgr.I.SetState(GameState.kPaused,false);
-  else if(GameMgr.I.CurState==GameState.kPaused&&PauseUI.I!=null)PauseUI.I.OnCloseClicked();
  }
 }
 

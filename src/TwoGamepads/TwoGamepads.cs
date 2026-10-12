@@ -9,7 +9,7 @@ using HarmonyLib;
 using Rewired;
 using UnityEngine;
 
-[BepInPlugin("local.ballxpit.twogamepads","Local Coop Two Gamepads","2.1.10")]
+[BepInPlugin("local.ballxpit.twogamepads","Local Coop Two Gamepads","2.1.11")]
 [BepInDependency("sparrow.ballxpit.localcoop",BepInDependency.DependencyFlags.HardDependency)]
 public class TwoGamepads : BasePlugin {
  static Type ControllerType;
@@ -53,6 +53,7 @@ public class TwoGamepads : BasePlugin {
   if(Move==null||Aim==null||Mode==null||ApplyMove==null||ApplyAim==null||AimArc==null)throw new InvalidOperationException("Unsupported coop controller version.");
   var h=new Harmony("local.ballxpit.twogamepads");
   CoopSession.Install(h,ControllerType);
+  CoopPause.Install(h);
   ActiveControllerChanged=AccessTools.Method(typeof(InputMgr),"OnLastActiveControllerChanged");
   h.Patch(ActiveControllerChanged,prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(AllowActiveController)));
   h.Patch(AccessTools.Method(typeof(Player),"UpdateAim"),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(BeforePrimaryAim)),postfix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimaryAim)));
