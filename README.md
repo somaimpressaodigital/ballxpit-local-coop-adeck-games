@@ -48,5 +48,5 @@ Co-op progression is stored separately in `%LOCALAPPDATA%\BALLxPITCoop`. Do not 
 
 ## Credits and dependencies
 
-[CREDITS.md](CREDITS.md) and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) identify the original base authors and dependency licenses. The project owner confirmed permission from sparrowsj to redistribute the original base. This does not transfer ownership of that base or the game.
+[CREDITS.md](CREDITS.md) and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
 
