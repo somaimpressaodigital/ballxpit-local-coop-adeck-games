@@ -1,0 +1,4 @@
+using System;
+class LocaleRulesTests {
+ public static void Main(){int count=0;foreach(var sample in new[]{new[]{"pt","Portuguese","true"},new[]{"pt-BR","Portuguese (Brazil)","true"},new[]{"pt_PT","Portuguese (Portugal)","true"},new[]{"PTbr","","true"},new[]{"","Português (Brasil)","true"},new[]{"","Portuguese","true"},new[]{"en","English","false"},new[]{"es","Spanish","false"},new[]{"de","German","false"},new[]{"fr","French","false"},new[]{"ja","Japanese","false"},new[]{"zh-CN","Chinese","false"},new[]{"ru","Russian","false"},new[]{"","","false"},new[]{"en","Portuguese","false"}}){if(CoopLocaleRules.UsesPortuguese(sample[0],sample[1])!=bool.Parse(sample[2]))throw new Exception("Wrong language: "+sample[0]+" / "+sample[1]);count++;}Console.WriteLine("PASS: "+count+" language routing cases, Portuguese variants and English fallback.");}
+}

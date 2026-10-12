@@ -1,0 +1,17 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using HarmonyLib;
+using UnityEngine;
+public static class CoopPickups {
+ static readonly Dictionary<IntPtr,int> Owners=new Dictionary<IntPtr,int>();static readonly HashSet<IntPtr> Consumed=new HashSet<IntPtr>();static MethodInfo Enter,Exit;
+ sealed class Scope{public object Previous;public bool Scoped;public IntPtr Pickup;public bool Complete;}
+ public static void Install(Harmony h,Type controller){var context=controller.Assembly.GetType("BALLxPITLocalCoop.NativePlayerContext");Enter=AccessTools.Method(context,"EnterPlayerTwoContext");Exit=AccessTools.Method(context,"ExitContext");h.Patch(AccessTools.Method(typeof(PickupObj),"Init"),postfix:new HarmonyMethod(typeof(CoopPickups),nameof(Init)));h.Patch(AccessTools.Method(typeof(PickupObj),"StartPlayerPickUp"),prefix:new HarmonyMethod(typeof(CoopPickups),nameof(Start)));h.Patch(AccessTools.Method(typeof(PickupObj),"CompletePickup"),prefix:new HarmonyMethod(typeof(CoopPickups),nameof(Complete)),finalizer:new HarmonyMethod(typeof(CoopPickups),nameof(Finish)));foreach(var type in typeof(PickupObj).GetNestedTypes(BindingFlags.Public|BindingFlags.NonPublic))if(type.Name.Contains("AnimatePlayerPickUp"))h.Patch(AccessTools.Method(type,"MoveNext"),prefix:new HarmonyMethod(typeof(CoopPickups),nameof(Animation)),finalizer:new HarmonyMethod(typeof(CoopPickups),nameof(Finish)));}
+ static void Init(PickupObj __instance){Owners.Remove(__instance.Pointer);Consumed.Remove(__instance.Pointer);}
+ static bool Start(PickupObj __instance){if(!CoopVitals.Active)return true;if(Owners.ContainsKey(__instance.Pointer)||Consumed.Contains(__instance.Pointer))return false;int owner=CoopCombat.SimulationOwner>=0?CoopCombat.SimulationOwner:CoopVitals.Owner(Player.I);if(CoopVitals.Down(owner))return false;Owners[__instance.Pointer]=owner;return true;}
+ static bool Animation(object __instance,ref bool __result,out Scope __state){__state=null;if(!CoopMode.Enabled)return true;if(SceneMgr.GetCurScene()!=GameScene.kGame||CoopRoundStats.Complete){__result=false;return false;}PickupObj pickup=null;foreach(var property in __instance.GetType().GetProperties())if(property.PropertyType==typeof(PickupObj)){pickup=property.GetValue(__instance) as PickupObj;break;}if(pickup==null||!pickup.gameObject.activeInHierarchy||Player.I==null){__result=false;return false;}if(!CoopVitals.Active)return true;int owner;if(!Owners.TryGetValue(pickup.Pointer,out owner))return true;if(CoopCombat.PlayerAt(owner)==null){__result=false;return false;}__state=new Scope{Pickup=pickup.Pointer};if(owner==1){__state.Previous=Enter.Invoke(null,new object[]{CoopCombat.PlayerAt(1)});__state.Scoped=true;}return true;}
+ static bool Complete(PickupObj __instance,out Scope __state){__state=null;if(!CoopVitals.Active)return true;if(!Consumed.Add(__instance.Pointer))return false;int owner;if(!Owners.TryGetValue(__instance.Pointer,out owner)){var closest=CoopCombat.NearestLiving(__instance.transform.position);owner=closest==null?0:CoopVitals.Owner(closest);}__state=new Scope{Pickup=__instance.Pointer,Complete=true};if(owner==1){__state.Previous=Enter.Invoke(null,new object[]{CoopCombat.PlayerAt(1)});__state.Scoped=true;}return true;}
+ static void Finish(Scope __state){if(__state==null)return;try{if(__state.Scoped)Exit.Invoke(null,new[]{__state.Previous});}finally{if(__state.Complete)Owners.Remove(__state.Pickup);}}
+}
+
+
