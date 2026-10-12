@@ -91,7 +91,7 @@ public static class CoopMode {
  static bool MenuChoice(MainMenuOption __0){if(CoopCredits.Active)return false;if(NativeStarting)return true;
   if(Enabled&&(CoopCharacters.Selecting||ChoosingLevel||Perks))return false;
   if((int)__0==99){Begin(MainMenuUI.I);return false;}
-  if(Enabled){Enabled=false;ChoosingLevel=false;Perks=false;NativeChoiceOverlay.Hide();RestoreSolo();}
+  if(Enabled){CoopSession.ResetRound();Enabled=false;ChoosingLevel=false;Perks=false;NativeChoiceOverlay.Hide();RestoreSolo();TwoGamepads.LeaveCoopRouting();}
   return true;
  }
  static bool MenuButtonClicked(MainMenuBtn __instance){
@@ -107,6 +107,7 @@ public static class CoopMode {
  static bool CoopPointerUp(CoolButton __instance,UnityEngine.EventSystems.PointerEventData __0){if(!IsCoopButton(__instance))return true;bool click=__instance._isPointerDown&&__instance._isPointerInside&&__instance.IsInteractable()&&__0.button==UnityEngine.EventSystems.PointerEventData.InputButton.Left;__instance._isPointerDown=false;if(click)__instance.OnClicked?.Invoke();return false;}
  static void Begin(Component source){
   if(!CoopTestHarness.Active&&(TwoGamepads.GetPad(0)==null||TwoGamepads.GetPad(1)==null)){Log.LogWarning("Coop local requires two connected gamepads.");return;}
+  CoopSession.ResetRound();
   Load();if(!Enabled){SaveMgr.I.LoadMeta();SeedMetaPath=SaveMgr.I.GetMetaSavePath(PlayerPrefsMgr.sSaveSlot);SeedBackupPath=SaveMgr.I.GetMetaSaveBackupPath(PlayerPrefsMgr.sSaveSlot);SoloMeta=MetaSaveData.I;SoloBattle=SaveMgr.I.BattleSave;SoloPaths=new[]{SaveMgr.kBattleSavePath,SaveMgr.kMetaSavePath,SaveMgr.kMetaSaveTempPath,SaveMgr.kMetaSaveBackupPath};}Enabled=true; Directory.CreateDirectory(Folder);RedirectStaticPaths();Awarded=false;Perks=false;ChoosingLevel=false;
   SaveMgr.kMetaSavePath=Path.Combine(Folder,Path.GetFileName(SeedMetaPath));SaveMgr.kMetaSaveBackupPath=Path.Combine(Folder,Path.GetFileName(SeedBackupPath));SaveMgr.kMetaSaveTempPath=Path.Combine(Folder,Path.GetFileName(SaveMgr.I.GetMetaSaveTempPath(PlayerPrefsMgr.sSaveSlot)));
   string ownMeta=Path.Combine(Folder,Path.GetFileName(SeedMetaPath)),ownBackup=Path.Combine(Folder,Path.GetFileName(SeedBackupPath));
@@ -114,7 +115,7 @@ public static class CoopMode {
   for(int i=0;i<meta.Chars.Length;i++){var character=meta.Chars[i];character.IsUnlocked=State.Unlocked.Contains((int)character.Type);character.BonusStats=new Il2CppStructArray<int>((int)StatType.kNum);character.SetState(CharState.kIdle);}
   PopulateLevels();CoopCharacters.OpenStandalone(source);if(MainMenuUI.I!=null)MainMenuUI.I.gameObject.SetActive(false);
  }
- public static void Exit(){Save();Enabled=false;Preparing=false;ChoosingLevel=false;Perks=false;Returning=false;CoopCharacters.Selecting=false;NativeChoiceOverlay.Hide();RestoreSolo();if(MainMenuUI.I!=null)MainMenuUI.I.gameObject.SetActive(true);}
+ public static void Exit(){Save();CoopDecisions.AbortForSceneChange();CoopSession.ResetRound();Enabled=false;Preparing=false;ChoosingLevel=false;Perks=false;Returning=false;CoopCharacters.Selecting=false;NativeChoiceOverlay.Hide();RestoreSolo();TwoGamepads.LeaveCoopRouting();if(MainMenuUI.I!=null)MainMenuUI.I.gameObject.SetActive(true);}
  public static bool Unlocked(CharType type){return !Enabled||State.Unlocked.Contains((int)type);}
  public static void ApplyStats(CharBattleInst character,int slot){if(!Enabled)return;
   // The menu's temporary character can precede the native battle-stat initialization.
@@ -199,7 +200,7 @@ public static class CoopMode {
   if(BallMgr.I!=null)MEC.Timing.KillCoroutines(BallMgr.I._ballAnim);
   if(GameCompleteObj.I!=null){MEC.Timing.KillCoroutines(GameCompleteObj.I._runAnim);MEC.Timing.KillCoroutines(GameCompleteObj.I._updateAnim);}
   if(LevelUpUI.I!=null)foreach(var property in typeof(LevelUpUI).GetProperties())if(property.PropertyType==typeof(MEC.CoroutineHandle)&&property.CanRead)MEC.Timing.KillCoroutines((MEC.CoroutineHandle)property.GetValue(LevelUpUI.I));
-  CoopVitals.StopShots();NativeChoiceOverlay.Hide();SceneMgr.I.LoadScene(GameScene.kMainMenu,0f);return false;}
+  CoopVitals.StopShots();CoopSession.ResetRound();NativeChoiceOverlay.Hide();SceneMgr.I.LoadScene(GameScene.kMainMenu,0f);return false;}
  public static void Update(){
   if(MainMenuUI.I!=null&&MainMenuUI.I.Btns!=null)foreach(var btn in MainMenuUI.I.Btns)if(btn!=null&&btn.gameObject.name=="CoopLocalButton"){btn.Option=(MainMenuOption)99;if(btn.Loc!=null)btn.Loc.enabled=false;if(btn.Txt!=null&&btn.Txt.text!=CoopLocalization.Text("Coop local"))btn.Txt.text=CoopLocalization.Text("Coop local");}
   if(!Enabled)return;if(Preparing){try{LaunchNative();}catch(Exception e){Preparing=false;Log.LogError("Coop preparation failed: "+e);NativeChoiceOverlay.Show(CoopLocalization.Text("Não foi possível preparar a partida"),CoopLocalization.Text("A preparação foi interrompida."));}return;}if(SceneMgr.GetCurScene()!=GameScene.kMainMenu||!Application.isFocused)return;

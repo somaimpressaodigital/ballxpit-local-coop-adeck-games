@@ -1,0 +1,4 @@
+using System;
+class SessionRulesTests {
+ public static void Main(){int checks=0;foreach(bool coop in new[]{false,true})foreach(bool battle in new[]{false,true}){if(CoopSessionRules.AllowSecondPlayer(coop,battle)!=(coop&&battle))throw new Exception("Wrong second-player lifecycle");checks++;}if(CoopSessionRules.InputSlot(false,true,1,true)!=-1)throw new Exception("Solo input overridden");if(CoopSessionRules.InputSlot(true,false,1,true)!=-1)throw new Exception("Uninitialized coop input overridden");if(CoopSessionRules.InputSlot(true,true,0,true)!=0)throw new Exception("P1 simulation read P2 context");if(CoopSessionRules.InputSlot(true,true,1,false)!=1)throw new Exception("P2 simulation read P1 context");if(CoopSessionRules.InputSlot(true,true,-1,false)!=0||CoopSessionRules.InputSlot(true,true,-1,true)!=1)throw new Exception("Context fallback merged slots");Console.WriteLine("PASS: "+(checks+6)+" solo/coop lifecycle and actor-input routing checks.");}
+}

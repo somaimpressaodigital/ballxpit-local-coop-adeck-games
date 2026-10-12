@@ -30,7 +30,7 @@ public static class CoopDecisions {
  static void Open(LevelUpUI __instance){
   if(!CanOpen())return;
   UI=__instance;Started=false;ErrorBlocked=false;Gate.Reset();Next[0]=Next[1]=0;
-  Pending=CoopCharacters.IndependentReady&&(CoopMode.Enabled||TwoGamepads.GetPad(1)!=null);
+  Pending=CoopMode.Enabled&&CoopCharacters.IndependentReady;
   if(Pending){NativeChoiceOverlay.Create(__instance);NativeChoiceOverlay.ClearChoices();}
   Armed=Time.unscaledTime+0.6f;
   if(Pending){TwoGamepads.VibratePad(1,0.3f,0.15f);Log.LogInfo("Coop decision opened: "+UI.Type+"; waiting for both players.");}

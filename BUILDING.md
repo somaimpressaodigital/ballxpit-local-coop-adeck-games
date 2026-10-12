@@ -87,3 +87,4 @@ Packages are written to `dist/` with the correct root layout and a SHA-256 manif
 - **Security software flags `winhttp.dll`:** see [SECURITY.md](SECURITY.md). Do not disable antivirus protections as a build step.
 - **DLL is locked:** close BALL x PIT before replacing installed plugins. `Build.ps1` writes to `out/` and does not overwrite the live game.
 
+

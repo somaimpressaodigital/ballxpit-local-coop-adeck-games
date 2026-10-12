@@ -9,7 +9,7 @@ using HarmonyLib;
 using Rewired;
 using UnityEngine;
 
-[BepInPlugin("local.ballxpit.twogamepads","Local Coop Two Gamepads","2.1.9")]
+[BepInPlugin("local.ballxpit.twogamepads","Local Coop Two Gamepads","2.1.10")]
 [BepInDependency("sparrow.ballxpit.localcoop",BepInDependency.DependencyFlags.HardDependency)]
 public class TwoGamepads : BasePlugin {
  static Type ControllerType;
@@ -30,6 +30,7 @@ public class TwoGamepads : BasePlugin {
  static bool FirstTemplateReady;
  static float NextMapRefresh;
  static bool HadFocus;
+ static Rewired.Player RoutingPlayer;static bool OriginalAutoAssignment;static readonly List<int> OriginalJoysticks=new List<int>();
  static readonly ControllerFrameAim PrimaryTurn=new ControllerFrameAim();static IntPtr PrimaryAimOwner;
  static readonly ControllerFrameAim SecondTurn=new ControllerFrameAim();static IntPtr SecondAimOwner;
  public static bool TestShoot;static bool Warned; static float NextShotLog;
@@ -51,13 +52,14 @@ public class TwoGamepads : BasePlugin {
   AimArc=AccessTools.Method(ControllerType,"GetNativeAimArcDegrees");
   if(Move==null||Aim==null||Mode==null||ApplyMove==null||ApplyAim==null||AimArc==null)throw new InvalidOperationException("Unsupported coop controller version.");
   var h=new Harmony("local.ballxpit.twogamepads");
+  CoopSession.Install(h,ControllerType);
   ActiveControllerChanged=AccessTools.Method(typeof(InputMgr),"OnLastActiveControllerChanged");
   h.Patch(ActiveControllerChanged,prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(AllowActiveController)));
   h.Patch(AccessTools.Method(typeof(Player),"UpdateAim"),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(BeforePrimaryAim)),postfix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimaryAim)));
   h.Patch(AccessTools.Method(typeof(Player),"SetAimDir"),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimarySetAim)));
   foreach(var method in typeof(InputMgr).GetMethods(BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly))if(method.Name=="GetAxis"||method.Name=="IsBtnHeld"||method.Name=="IsBtnDown"||method.Name=="IsBtnUp")h.Patch(method,prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(EnforceInputOwner)){priority=Priority.First});
-  h.Patch(AccessTools.Method(typeof(InputMgr),"GetAxis",new[]{typeof(GameActionType)}),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimaryAxis)){priority=Priority.Last});
-  h.Patch(AccessTools.Method(typeof(InputMgr),"IsBtnHeld",new[]{typeof(GameActionType)}),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimaryHeld)){priority=Priority.Last});
+  h.Patch(AccessTools.Method(typeof(InputMgr),"GetAxis",new[]{typeof(GameActionType)}),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimaryAxis)){priority=Priority.First});
+  h.Patch(AccessTools.Method(typeof(InputMgr),"IsBtnHeld",new[]{typeof(GameActionType)}),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(PrimaryHeld)){priority=Priority.First});
   h.Patch(AccessTools.Method(ControllerType,"Update"),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(Poll)));
   h.Patch(AccessTools.Method(ControllerType,"UpdatePlayerTwoInput"),prefix:new HarmonyMethod(typeof(TwoGamepads),nameof(InputPrefix)));
   CoopVisuals.Install(h,ControllerType,Log);
@@ -89,7 +91,9 @@ public class TwoGamepads : BasePlugin {
    if(mgr==null)return;
    var player=mgr.GetRewiredPlayer();
    if(player==null)return;
-   bool battle=(SecondPlayer.GetValue(__instance) as UnityEngine.Object)!=null;
+   Pad=second?.GetTemplate<IGamepadTemplate>();
+   if(!CoopMode.Enabled){LeaveCoopRouting();return;}
+   if(RoutingPlayer==null||RoutingPlayer.Pointer!=player.Pointer){LeaveCoopRouting();RoutingPlayer=player;OriginalAutoAssignment=player.controllers.excludeFromControllerAutoAssignment;for(int i=0;i<count;i++)if(player.controllers.ContainsController(sticks[i]))OriginalJoysticks.Add(sticks[i].id);}
    bool assignmentChanged=false;
    bool regainedFocus=Application.isFocused&&!HadFocus;
    HadFocus=Application.isFocused;
@@ -128,20 +132,22 @@ public class TwoGamepads : BasePlugin {
  }
  static bool AllowActiveController(Rewired.Controller __1){
   // The shared Rewired player belongs to P1 during independent coop decisions/combat.
-  return !Enabled.Value||__1==null||__1.type!=Rewired.ControllerType.Joystick||__1.id==Roles.First;
+  return !CoopMode.Enabled||!Enabled.Value||__1==null||__1.type!=Rewired.ControllerType.Joystick||__1.id==Roles.First;
  }
  static void EnforceInputOwner(){
-  if(!Enabled.Value||!ReInput.isReady||InputMgr.I==null)return;var player=InputMgr.I.GetRewiredPlayer();if(player==null)return;player.controllers.excludeFromControllerAutoAssignment=true;
+  if(!CoopMode.Enabled||!Enabled.Value||!ReInput.isReady||InputMgr.I==null)return;var player=InputMgr.I.GetRewiredPlayer();if(player==null)return;player.controllers.excludeFromControllerAutoAssignment=true;
   var sticks=ReInput.controllers.Joysticks;for(int i=0;i<ReInput.controllers.joystickCount;i++)if(sticks[i].id!=Roles.First&&player.controllers.ContainsController(sticks[i]))player.controllers.RemoveController(sticks[i]);
  }
  static bool PrimaryInput(){return Enabled.Value&&CoopMode.Enabled&&CoopVitals.Active&&!CoopTestHarness.Active&&Application.isFocused&&Player.I==CoopCombat.PlayerAt(0);}
+ static int InputSlot(){return !Enabled.Value||!CoopVitals.Active||CoopTestHarness.Active||!Application.isFocused?-1:CoopSessionRules.InputSlot(CoopMode.Enabled,CoopCharacters.IndependentReady,CoopCombat.SimulationOwner,Player.I==CoopCombat.PlayerAt(1));}
  static bool PrimaryAxis(GameActionType __0,ref float __result){
-  if(!PrimaryInput())return true;var pad=GetPad(0);if(pad==null)return true;Vector2 axis;
+  int slot=InputSlot();if(slot<0)return true;var pad=GetPad(slot);Vector2 axis;
+  if(pad==null){if(__0==GameActionType.kMoveHorizontal||__0==GameActionType.kMoveVertical||__0==GameActionType.kAimHorizontal||__0==GameActionType.kAimVertical){__result=0;return false;}return true;}
   if(__0==GameActionType.kMoveHorizontal||__0==GameActionType.kMoveVertical)axis=Stick(pad.leftStick.value,Deadzone.Value);
   else if(__0==GameActionType.kAimHorizontal||__0==GameActionType.kAimVertical)axis=Stick(pad.rightStick.value,Deadzone.Value);else return true;
   if(InvertY.Value)axis.y=-axis.y;__result=(__0==GameActionType.kMoveHorizontal||__0==GameActionType.kAimHorizontal)?axis.x:axis.y;return false;
  }
- static bool PrimaryHeld(GameActionType __0,ref bool __result){if(__0!=GameActionType.kShoot||!PrimaryInput())return true;var pad=GetPad(0);if(pad==null)return true;__result=pad.rightTrigger.value>0.25f||pad.rightBumper.value||pad.a.value;return false;}
+ static bool PrimaryHeld(GameActionType __0,ref bool __result){int slot=InputSlot();if(__0!=GameActionType.kShoot||slot<0)return true;var pad=GetPad(slot);__result=pad!=null&&(pad.rightTrigger.value>0.25f||pad.rightBumper.value||pad.a.value);return false;}
  static void BeforePrimaryAim(Player __instance,out Vector2 __state){__state=__instance.GetLastAimDir();}
  static bool PrimaryDirection(Player player,out Vector2 direction){
   direction=Vector2.up;
@@ -161,7 +167,8 @@ public class TwoGamepads : BasePlugin {
  static void PrimarySetAim(Player __instance,ref Vector2 __0){Vector2 direction;if(PrimaryDirection(__instance,out direction))__0=direction;}
  static void PrimaryAim(Player __instance,Vector2 __state){Vector2 direction;if(PrimaryDirection(__instance,out direction))__instance.SetAimDir(direction);}
  static bool InputPrefix(object __instance){
-  if(Pad==null)return true;
+  if(!CoopMode.Enabled)return true;
+  if(Pad==null){Move.SetValue(__instance,Vector2.zero);ApplyMove.Invoke(__instance,new object[]{false});return false;}
   Vector2 move=!CoopVitals.Down(1)&&!CoopTestHarness.Active&&Application.isFocused&&AllowCombat()?Pad.leftStick.value:Vector2.zero;
   Vector2 aim=!CoopVitals.Down(1)&&!CoopTestHarness.Active&&Application.isFocused&&AllowCombat()?Pad.rightStick.value:Vector2.zero;
   if(InvertY.Value){move.y=-move.y;aim.y=-aim.y;}
@@ -195,8 +202,10 @@ public class TwoGamepads : BasePlugin {
   return null;
  }
  public static void VibratePad(int slot,float intensity,float duration){if(!ReInput.isReady)return;int id=slot==0?Roles.First:Roles.Second;var sticks=ReInput.controllers.Joysticks;for(int i=0;i<ReInput.controllers.joystickCount;i++)if(sticks[i].id==id&&sticks[i].supportsVibration)sticks[i].SetVibration(Mathf.Clamp01(intensity),Mathf.Clamp01(intensity),Mathf.Max(0,duration),Mathf.Max(0,duration));}
- static void ShotResult(bool __result,string __2){if(__result||Time.unscaledTime<NextShotLog)return;NextShotLog=Time.unscaledTime+5;Plugin.Log.LogInfo("P2 shot blocked: "+__2);}
- static bool AllowCombat(){return !CoopVitals.Down(1)&&(!CoopMode.Enabled||!CoopRoundStats.Complete)&&(GameMgr.I==null||GameMgr.I.CurState==GameState.kPlaying);}
+ static void ShotResult(bool __result,string __2){if(__result||Time.unscaledTime<NextShotLog)return;NextShotLog=Time.unscaledTime+5;Plugin.Log.LogInfo("P2 shot blocked: "+__2);if(CoopTestHarness.Active&&CoopCharacters.IndependentReady)CoopCharacters.ForSecond(()=>Plugin.Log.LogInfo("P2 launch diagnostics: health="+BattleSaveData.I.CurHealth+", interrupted="+BallMgr.I._isShootInterrupted+", state="+BallMgr.I.GetBallState()+", levelUp="+Player.I.IsRunningLevelUp+", idx="+BallMgr.I._curBallIdx+", shootComplete="+BallMgr.I.LastShootCompleteTime+", time="+TimeMgr.I.GetPhysicsTime()));}
+ static bool AllowCombat(){return CoopMode.Enabled&&SceneMgr.GetCurScene()==GameScene.kGame&&!CoopVitals.Down(1)&&!CoopRoundStats.Complete&&GameMgr.I!=null&&GameMgr.I.CurState==GameState.kPlaying;}
+ public static void ResetInputSession(){PrimaryTurn.Reset();SecondTurn.Reset();PrimaryAimOwner=SecondAimOwner=IntPtr.Zero;MappedFirst=-1;FirstTemplateReady=false;MapRetries=0;NextMapRefresh=0;HadFocus=false;}
+ public static void LeaveCoopRouting(){if(RoutingPlayer==null)return;RoutingPlayer.controllers.excludeFromControllerAutoAssignment=OriginalAutoAssignment;if(ReInput.isReady){var sticks=ReInput.controllers.Joysticks;for(int i=0;i<ReInput.controllers.joystickCount;i++)if(OriginalJoysticks.Contains(sticks[i].id)&&!RoutingPlayer.controllers.ContainsController(sticks[i]))RoutingPlayer.controllers.AddController(sticks[i],false);}RoutingPlayer=null;OriginalJoysticks.Clear();ResetInputSession();}
  public static bool Automatic(int slot){if(!CoopCharacters.IndependentReady)return false;bool innate=false;if(slot==1)CoopCharacters.ForSecond(()=>innate=BattleSaveData.I.CurChar.HasProp(CharProp.kAlwaysShoot));else innate=BattleSaveData.I.CurChar.HasProp(CharProp.kAlwaysShoot);if(innate)return true;if(slot==1){var instance=AccessTools.Field(ControllerType,"_instance").GetValue(null);return instance!=null&&(bool)AutoShoot.GetValue(instance);}return PlayerPrefsMgr.sAutofire;}
  static bool ReadShoot(KeyCode key){if(TestShoot)return true;
   if(CoopTestHarness.Active)return false;
@@ -219,6 +228,8 @@ public class TwoGamepads : BasePlugin {
   }
  }
 }
+
+
 
 
 

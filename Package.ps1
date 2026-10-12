@@ -16,7 +16,7 @@ if($Complete){
  Copy-Item -LiteralPath (Join-Path $taskRoot 'vendor\licenses') -Destination (Join-Path $taskStage 'LICENSES') -Recurse
 }
 Copy-Item -LiteralPath (Join-Path $taskRoot 'out\BepInEx') -Destination $taskStage -Recurse -Force
-foreach($taskDoc in @('README.md','BUILDING.md','CREDITS.md','THIRD-PARTY-NOTICES.md','SECURITY.md')){Copy-Item -LiteralPath (Join-Path $taskRoot $taskDoc) -Destination $taskStage}
+foreach($taskDoc in @('README.md','BUILDING.md','CREDITS.md','THIRD-PARTY-NOTICES.md','SECURITY.md','CHANGELOG.md','VALIDATION.md')){Copy-Item -LiteralPath (Join-Path $taskRoot $taskDoc) -Destination $taskStage}
 $taskManifest=@(Get-ChildItem -LiteralPath $taskStage -File -Recurse | ForEach-Object {[pscustomobject]@{Path=$_.FullName.Substring($taskStage.Length+1).Replace('\','/');Bytes=$_.Length;SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash}})
 ConvertTo-Json -InputObject $taskManifest -Depth 4 | Set-Content -LiteralPath (Join-Path $taskStage 'manifest.json') -Encoding utf8
 $taskVersion=(Get-Content -LiteralPath (Join-Path $taskRoot 'VERSION') -Raw).Trim()

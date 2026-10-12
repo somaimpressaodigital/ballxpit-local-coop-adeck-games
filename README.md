@@ -17,7 +17,7 @@ This repository contains the companion source code, build scripts, and the two r
 
 ## Install a release
 
-1. Download `ballxpit-coop-2.1.9-complete.zip` from [Releases](https://github.com/somaimpressaodigital/ballxpit-local-coop-adeck-games/releases).
+1. Download `ballxpit-coop-2.1.10-complete.zip` from [Releases](https://github.com/somaimpressaodigital/ballxpit-local-coop-adeck-games/releases).
 2. Close BALL x PIT. Back up existing mod configurations before updating.
 3. Extract the **contents** directly into the folder containing `Balls.exe`. `BepInEx`, `dotnet`, `winhttp.dll`, and `doorstop_config.ini` belong next to the executable.
 4. Launch the game. The first launch may take time and require internet access while BepInEx downloads Unity libraries and generates interop assemblies.
@@ -40,13 +40,15 @@ See [BUILDING.md](BUILDING.md) for prerequisites, dependency installation, compi
 
 ## Compatibility and validation
 
-Baseline: Windows x64, BALL x PIT using Unity **6000.0.50f1**, BepInEx IL2CPP **6.0.0-be.788**, and BALLxPIT Local Coop **0.1.0**. The companion is **2.1.9**; the balance plugin is **1.0.1**. Other game or base versions may require changes because the companion integrates with native game methods and private base-plugin fields.
+Baseline: Windows x64, BALL x PIT using Unity **6000.0.50f1**, BepInEx IL2CPP **6.0.0-be.788**, and BALLxPIT Local Coop **0.1.0**. The companion is **2.1.10**; the balance plugin is **1.0.1**. Other game or base versions may require changes because the companion integrates with native game methods and private base-plugin fields.
 
-Version 2.1.9 adds automatic localization to the previously tested 2.1.8 gameplay/controller baseline. Language routing and translation checks passed; the 2.1.9 localization update has not received a new full in-game visual/combat replay. Automated rule tests are useful regression checks, not a substitute for real controller, boss, and full-run playtesting.
+Version 2.1.10 fixes the extra reload wait, isolates solo play, and resets co-op state between runs. See [CHANGELOG.md](CHANGELOG.md) for the changes and [VALIDATION.md](VALIDATION.md) for the test evidence and its limits. Automated rule tests and native scenario fixtures are useful regression checks, not a substitute for real physical-controller, boss, and full-run playtesting.
 
 Co-op progression is stored separately in `%LOCALAPPDATA%\BALLxPITCoop`. Do not commit or distribute personal saves. Read [SECURITY.md](SECURITY.md) for the loader-file antivirus report and its verification limits.
 
 ## Credits and dependencies
 
 [CREDITS.md](CREDITS.md) and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) identify the original base authors and dependency licenses. The project owner confirmed permission from sparrowsj to redistribute the original base. This does not transfer ownership of that base or the game.
+
+
 

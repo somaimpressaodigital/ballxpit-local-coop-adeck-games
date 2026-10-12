@@ -75,7 +75,7 @@ public static class CoopCharacters {
  static void Open(CharSelectUI __instance){if(CoopMode.Preparing)return;
   Standalone.Clear();
   Selecting=false;IndependentInventory=false;SecondCharacter=null;FirstCharacter=null;SecondStats=null;FirstStats=null;SecondRuntime=null;Starter=null;SecondChoice=null;
-  if(__instance.IsSelectingFusion||TwoGamepads.GetPad(1)==null)return;
+  if(!CoopMode.Enabled||__instance.IsSelectingFusion||TwoGamepads.GetPad(1)==null)return;
   Items.Clear();
   var components=__instance.GetComponentsInChildren(Il2CppType.Of<CharSelectItem>(),true);
   for(int i=0;i<components.Length;i++){
@@ -154,8 +154,10 @@ public static class CoopCharacters {
   }finally{Synchronizing=false;}
  }
  public static void PrepareHero(HeroInst hero){if(hero==null||hero._hasSpecial!=null&&hero._hasStatusEff!=null&&hero._hasAOE!=null)return;var special=new Il2CppStructArray<bool>((int)BallSpecialType.kNum);var status=new Il2CppStructArray<bool>((int)StatusEffectType.kNum);var aoe=new Il2CppStructArray<bool>((int)BallAOEType.kNum);int count=hero.GetNumInfo();for(int i=0;i<count;i++){var info=hero.GetInfo(i);if(info==null)continue;if(info.Specials!=null)for(int j=0;j<info.Specials.Count;j++)special[(int)info.Specials[j]]=true;if(info.HitEffects!=null)for(int j=0;j<info.HitEffects.Count;j++)status[(int)info.HitEffects[j]]=true;if(info.AOETypes!=null)for(int j=0;j<info.AOETypes.Count;j++)aoe[(int)info.AOETypes[j]]=true;}hero._hasSpecial=special;hero._hasStatusEff=status;hero._hasAOE=aoe;}
- static void PrepareBall(HeroInst __0){if(CoopMode.Enabled||IndependentReady)PrepareHero(__0);}
- static void PrepareHeroes(){if(!CoopMode.Enabled&& !IndependentReady)return;var list=BattleSaveData.I?.Heroes;if(list!=null)for(int i=0;i<list.Count;i++)PrepareHero(list[i]);}
+ // Runtime hero caches can be missing after the original base's context reset.
+ // Rebuild only missing caches from authored info, including a subsequent solo run.
+ static void PrepareBall(HeroInst __0){PrepareHero(__0);}
+ static void PrepareHeroes(){var list=BattleSaveData.I?.Heroes;if(list!=null)for(int i=0;i<list.Count;i++)PrepareHero(list[i]);}
  static void CalculatedStats(){PrepareHeroes();if(SecondCharacter!=null&&(bool)InContext.GetValue(null))SecondStats=CaptureStats();CoopVitals.RefreshStats();}
  static bool MultipleGetter(ref bool __result){
   if(SecondRuntime==null||!(bool)InContext.GetValue(null))return true;
@@ -175,7 +177,8 @@ public static class CoopCharacters {
   for(int i=0;i<OwnHeroes.Count;i++)if(OwnHeroes[i].Pointer==__0.Pointer){__result=true;return false;}
   return true;
  }
- public static bool IndependentReady {get{return SecondCharacter!=null&&SecondRuntime!=null;}}
+ public static bool IndependentReady {get{return CoopMode.Enabled&&SecondCharacter!=null&&SecondRuntime!=null;}}
+ public static void ResetSession(){Selecting=false;Launching=false;IndependentInventory=false;WasSecond=false;Synchronizing=false;SecondCharacter=FirstCharacter=null;SecondRuntime=null;FirstStats=SecondStats=null;FirstPassives=SecondPassives=null;FirstHeroes=OwnHeroes=null;Starter=null;SecondChoice=null;Items.Clear();Standalone.Clear();}
  public static Il2CppSystem.Collections.Generic.List<HeroInst> HeroesFor(int slot){if(slot==1)return OwnHeroes;return FirstHeroes??InventoryFirstHeroes?.GetValue(null) as Il2CppSystem.Collections.Generic.List<HeroInst>??BattleSaveData.I?.Heroes;}
  public static Il2CppSystem.Collections.Generic.List<PassiveInst> PassivesFor(int slot){return slot==1?SecondPassives:FirstPassives??BattleSaveData.I?.Passives;}
  static bool SecondAlwaysShoots(ref bool __result){if(!IndependentReady)return true;__result=SecondCharacter.HasProp(CharProp.kAlwaysShoot);return false;}

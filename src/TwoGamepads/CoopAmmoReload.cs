@@ -4,6 +4,7 @@ using UnityEngine;
 public static class CoopAmmoReload {
  static bool Flushing;static int Logged;static readonly Il2CppSystem.Collections.Generic.List<BallObj>[] HeldLists=new Il2CppSystem.Collections.Generic.List<BallObj>[2];
  public static void Install(Harmony h){h.Patch(AccessTools.Method(typeof(BallMgr),"CreateBall"),postfix:new HarmonyMethod(typeof(CoopAmmoReload),nameof(Born)));}
+ public static void Reset(){HeldLists[0]=HeldLists[1]=null;Flushing=false;Logged=0;}
  static void Born(BallObj __result){if(!CoopMode.Enabled||__result==null)return;foreach(var list in HeldLists)if(list!=null)while(list.Remove(__result)){};}
  public static void Tick(){if(!CoopVitals.Active||!CoopCharacters.IndependentReady||CoopRoundStats.Complete||GameMgr.I==null||GameMgr.I.CurState!=GameState.kPlaying)return;Maintain(0);CoopCharacters.ForSecond(()=>Maintain(1));}
  static void Maintain(int slot){var m=BallMgr.I;if(m==null)return;var held=m.EarlyReturnedBalls;HeldLists[slot]=held;if(held!=null){var seen=new HashSet<System.IntPtr>();for(int i=held.Count-1;i>=0;i--){var b=held[i];if(b==null||!b.gameObject.activeInHierarchy||!b.IsBaby()||CoopRoundStats.BallOwner(b)!=slot||!seen.Add(b.Pointer))held.RemoveAt(i);}m._earlyReturnedFollowers=held.Count;}

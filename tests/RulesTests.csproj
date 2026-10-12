@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <Compile Include="../src/TwoGamepads/CoopLocaleRules.cs" />
+    <Compile Include="../src/TwoGamepads/CoopSessionRules.cs" />
     <Compile Include="../src/TwoGamepads/ControllerFrameAim.cs" />
     <Compile Include="../src/TwoGamepads/CoopAimRules.cs" />
     <Compile Include="../src/TwoGamepads/ControllerRoles.cs" />
